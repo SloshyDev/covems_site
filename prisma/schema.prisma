@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int      @id @default(autoincrement())
+  clave            Int      @unique
+  nombre           String
+  fecha_nacimiento DateTime?
+  rfc              String?
+  curp             String?
+  celular          String?
+  banco            String?
+  cuenta_clabe     String?
+  supervisor_clave Int?
+  estado           String
+  tipo_usuario     Int
+  solicitudes      Solicitud[] @relation("UserToSolicitudes")
+  polizas          Poliza[]    @relation("UserToPolizas")
+}
+
+model Solicitud {
+  id               Int      @id @default(autoincrement())
+  solicitud        String   @unique
+  recepcion        DateTime
+  asegurado        String
+  contratante      String
+  agenteClave      Int
+  agente           User     @relation("UserToSolicitudes", fields: [agenteClave], references: [clave])
+  primaAhorro      String?
+  formaPago        String
+  primaSolicitada  String?
+  poliza           String?
+  pase             Boolean
+  createdAt        DateTime @default(now())
+  polizas          Poliza[]
+}
+
+model Poliza {
+  id               Int      @id @default(autoincrement())
+  poliza           String  @unique // número de póliza
+  asegurado        String
+  agenteClave      Int
+  agente           User     @relation("UserToPolizas", fields: [agenteClave], references: [clave])
+  fechaRecibida    DateTime
+  solicitudId      Int     // relación a Solicitud
+  solicitud        Solicitud @relation(fields: [solicitudId], references: [id])
+  primaFraccionada String?
+  primaAnual       String?
+  formaPago        String
+  createdAt        DateTime @default(now())
+  fechaUltimoMov   DateTime?
+  ultimoRecibo     String?
+  dsn              String?
+  anioVig          Int?
+  recibos          Recibo[] @relation("PolizaToRecibos")
+}
+
+model Recibo {
+  id                  Int      @id @default(autoincrement())
+  grupo               String?
+  claveAgente         Int?
+  fechaMovimiento     DateTime?
+  poliza              String
+  polizaRef           Poliza   @relation("PolizaToRecibos", fields: [poliza], references: [poliza])
+  nombreAsegurado     String?
+  recibo              String?
+  dsn                 String?
+  sts                 String?
+  anioVig             Int?
+  fechaInicio         DateTime?
+  fechaVencimiento    DateTime?
+  primaFracc          Float?
+  recargoFijo         Float?
+  importeComble       Float?
+  pctComisPromotoria  Float?
+  comisPromotoria     Float?
+  pctComisAgente      Float?
+  comisAgente         Float?
+  pctComisSupervisor  Float?
+  comisSupervisor     Float?
+  nivelacionVariable  Float?
+  comisPrimerAnio     Float?
+  comisRenovacion     Float?
+  formaPago           String?
+  createdAt           DateTime @default(now())
+}
