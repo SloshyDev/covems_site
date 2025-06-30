@@ -1,5 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import "@/styles/globals.css";
+import NextAuthSessionProvider from "./SessionProvider";
+import AuthGuard from "@/components/AuthGuard";
+import Header from "@/components/Header";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,12 +20,20 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  // Usar useSession solo en client components
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <NextAuthSessionProvider>
+          <Header />
+          <AuthGuard>
+            <div className="App bg_primary flex min-h-screen pt-24 text-white">
+              {children}
+            </div>
+          </AuthGuard>
+        </NextAuthSessionProvider>
       </body>
     </html>
   );

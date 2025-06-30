@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+
+.bg_primary {
+  background: #0f2027; /* fallback for old browsers */
+  background: -webkit-linear-gradient(
+    to right,
+    #2c5364,
+    #203a43,
+    #0f2027
+  ); /* Chrome 10-25, Safari 5.1-6 */
+  background: linear-gradient(
+    to right,
+    #2c5364,
+    #203a43,
+    #0f2027
+  ); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+}
+
+body {
+  --sb-track-color: #232e33;
+  --sb-thumb-color: #5c6560;
+  --sb-size: 7px;
+}
+
+.comboBox::-webkit-scrollbar {
+  width: var(--sb-size);
+}
+
+.comboBox::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.comboBox::-webkit-scrollbar-thumb {
+  background: oklch(70.5% 0.015 286.067);
+  border-radius: 3px;
+}
+
+.comboBox {
+  max-height: 12rem !important;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .comboBox {
+    scrollbar-color: oklch(70.5% 0.015 286.067) transparent;
+  }
+}
+
+.listbox-btn {
+  @apply w-full rounded border border-white/20 px-2 py-1 text-left;
+}
+.listbox-btn:focus:not([data-focus]) {
+  outline: none;
+}
+.listbox-btn[data-focus] {
+  @apply outline-2 -outline-offset-2 outline-white/25;
+}
