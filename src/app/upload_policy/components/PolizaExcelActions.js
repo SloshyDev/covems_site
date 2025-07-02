@@ -9,10 +9,41 @@ export default function PolizaExcelActions({ solicitudes, onUploadFinish }) {
         className="bg-cyan-700 hover:bg-cyan-800 text-white font-bold py-2 px-4 rounded-xl shadow-md transition-all duration-150"
         onClick={() => {
           if (!solicitudes.length) return;
-          const blob = new Blob([generarPlantillaPolizas(solicitudes)], {
-            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          // Generar plantilla con columna de solicitud
+          const headers = [
+            "ID Solicitud",
+            "Solicitud",
+            "No. de Póliza",
+            "Asegurado",
+            "Clave Agente",
+            "Fecha Recibida",
+            "Prima Fraccionada",
+            "Prima Anual",
+            "Forma de Pago",
+          ];
+          const data = [headers];
+          solicitudes.forEach((s) => {
+            data.push([
+              s.id,
+              s.solicitud || "",
+              "",
+              s.asegurado || "",
+              s.agenteClave || "",
+              "",
+              "",
+              "",
+              "",
+            ]);
           });
-          const url = window.URL.createObjectURL(blob);
+          const ws = XLSX.utils.aoa_to_sheet(data);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Polizas");
+          const blob = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+          const url = window.URL.createObjectURL(
+            new Blob([blob], {
+              type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            })
+          );
           const a = document.createElement("a");
           a.href = url;
           a.download = "plantilla_polizas.xlsx";
@@ -44,6 +75,7 @@ export default function PolizaExcelActions({ solicitudes, onUploadFinish }) {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   solicitudId: row["ID Solicitud"],
+                  solicitud: row["Solicitud"],
                   poliza: row["No. de Póliza"],
                   asegurado: row["Asegurado"],
                   agenteClave: row["Clave Agente"],
