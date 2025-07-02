@@ -64,3 +64,20 @@ export async function POST(request) {
     );
   }
 }
+
+// GET /api/solicitud?sinPoliza=1 - Solicitudes sin póliza
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  if (searchParams.get("sinPoliza") === "1") {
+    // Buscar solicitudes que no tienen ninguna póliza asociada
+    const solicitudes = await prisma.solicitud.findMany({
+      where: {
+        polizas: { none: {} },
+      },
+      orderBy: { recepcion: "desc" },
+    });
+    return NextResponse.json(solicitudes);
+  }
+  // ...aquí podrías manejar otros GET si lo necesitas...
+  return NextResponse.json([]);
+}
