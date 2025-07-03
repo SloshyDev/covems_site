@@ -109,9 +109,8 @@ export default function UploadRecibosPage() {
       e.target.value = "";
     }
   };
-
   return (
-    <div className="flex flex-col items-center min-h-screen py-10 w-4/5 mx-auto">
+    <div className="flex flex-col items-center min-h-screen py-10 px-4 max-w-7xl mx-auto">
       <h1 className="text-3xl font-extrabold text-cyan-300 mb-8 text-center w-full">
         Vista previa de Recibos a cargar
       </h1>
@@ -161,13 +160,13 @@ export default function UploadRecibosPage() {
       </div>
       {rows.length > 0 && (
         <div className="w-full flex flex-col gap-6 items-start">
-          <TotalesComisiones 
-            recibos={rows} 
+          <TotalesComisiones
+            recibos={rows}
             compactFields={RECIBO_COMPACT_FIELDS}
             onShowDetail={setModalRecibo}
           />
           <button
-            className="mt-4 w-full max-w-6xl bg-gradient-to-r from-cyan-700 to-cyan-500 hover:from-cyan-800 hover:to-cyan-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="mt-4 mx-auto w-full max-w-6xl bg-gradient-to-r from-cyan-700 to-cyan-500 hover:from-cyan-800 hover:to-cyan-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
             disabled={loading}
             onClick={async () => {
               setSuccess("");
@@ -177,10 +176,16 @@ export default function UploadRecibosPage() {
                 fail = 0;
               for (const row of rows) {
                 try {
+                  // Asegura que poliza y recibo sean string
+                  const payload = {
+                    ...row,
+                    poliza: row.poliza !== undefined ? String(row.poliza) : undefined,
+                    recibo: row.recibo !== undefined ? String(row.recibo) : undefined,
+                  };
                   const res = await fetch("/api/recibo", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(row),
+                    body: JSON.stringify(payload),
                   });
                   if (res.ok) ok++;
                   else fail++;

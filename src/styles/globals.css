@@ -1,19 +1,18 @@
 @import 'tailwindcss';
 
 .bg_primary {
-  background: #0f2027; /* fallback for old browsers */
-  background: -webkit-linear-gradient(
-    to right,
-    #2c5364,
-    #203a43,
-    #0f2027
-  ); /* Chrome 10-25, Safari 5.1-6 */
-  background: linear-gradient(
-    to right,
-    #2c5364,
-    #203a43,
-    #0f2027
-  ); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+  background: #0f2027;
+  /* fallback for old browsers */
+  background: -webkit-linear-gradient(to right,
+      #2c5364,
+      #203a43,
+      #0f2027);
+  /* Chrome 10-25, Safari 5.1-6 */
+  background: linear-gradient(to right,
+      #2c5364,
+      #203a43,
+      #0f2027);
+  /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
 }
 
 body {
@@ -49,9 +48,50 @@ body {
 .listbox-btn {
   @apply w-full rounded border border-white/20 px-2 py-1 text-left;
 }
+
 .listbox-btn:focus:not([data-focus]) {
   outline: none;
 }
+
 .listbox-btn[data-focus] {
   @apply outline-2 -outline-offset-2 outline-white/25;
+}
+
+/* Estilos personalizados para las tablas de recibos */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-track-gray-800::-webkit-scrollbar-track {
+  background-color: #1f2937;
+  border-radius: 4px;
+}
+
+.scrollbar-thumb-cyan-600::-webkit-scrollbar-thumb {
+  background-color: #0891b2;
+  border-radius: 4px;
+}
+
+.scrollbar-thumb-cyan-600::-webkit-scrollbar-thumb:hover {
+  background-color: #0e7490;
+}
+
+/* Estilos para Firefox */
+@supports not selector(::-webkit-scrollbar) {
+  .scrollbar-thin {
+    scrollbar-color: #0891b2 #1f2937;
+  }
+}
+
+/* Mejoras para texto truncado con tooltip */
+.truncate-with-tooltip {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: help;
 }

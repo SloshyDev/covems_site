@@ -33,7 +33,7 @@ export async function POST(req) {
 
     if (!poliza) {
       return NextResponse.json({ error: "El campo 'poliza' es obligatorio" }, { status: 400 });
-    }
+    } const polizaStr = poliza !== undefined ? String(poliza) : undefined;
 
     // Ya no se busca la claveAgente por la poliza, se espera que venga en el payload
     const reciboCreado = await prisma.recibo.create({
@@ -41,8 +41,7 @@ export async function POST(req) {
         grupo: grupo || undefined,
         claveAgente: claveAgente ? Number(claveAgente) : undefined,
         fechaMovimiento: fechaMovimiento ? new Date(fechaMovimiento) : undefined,
-        poliza,
-        polizaRef: { connect: { poliza } },
+        polizaRef: { connect: { poliza: polizaStr } },
         nombreAsegurado: nombreAsegurado || undefined,
         recibo: recibo || undefined,
         dsn: dsn || undefined,

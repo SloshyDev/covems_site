@@ -28,22 +28,24 @@ export default function ReciboDetailModal({ open, onClose, recibo }) {
       ? "96%"
       : recibo.pctComisAgente;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
-      <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full border border-cyan-700 shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4">
+      <div className="bg-gray-900 rounded-xl p-4 lg:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-cyan-700 shadow-2xl relative">
         <button
-          className="absolute top-2 right-2 text-cyan-400 hover:text-cyan-200 text-xl font-bold"
+          className="absolute top-2 right-2 text-cyan-400 hover:text-cyan-200 text-xl font-bold w-8 h-8 flex items-center justify-center rounded-full hover:bg-cyan-900 transition-colors"
           onClick={onClose}
         >
           ×
         </button>
-        <h2 className="text-cyan-300 font-bold text-lg mb-4">
+        <h2 className="text-cyan-300 font-bold text-lg lg:text-xl mb-4 pr-8">
           Detalle del recibo
         </h2>
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4">
           {RECIBO_FIELDS.map((h) => (
-            <div key={h} className="flex justify-between text-sm">
-              <span className="font-semibold text-cyan-300 mr-2">{h}:</span>
-              <span className="text-cyan-100 text-right break-all">
+            <div key={h} className="flex flex-col sm:flex-row sm:justify-between text-sm lg:text-base bg-gray-800 p-3 rounded-lg border border-gray-700">
+              <span className="font-semibold text-cyan-300 mb-1 sm:mb-0 sm:mr-2 capitalize">
+                {h.replace(/([A-Z])/g, ' $1').trim()}:
+              </span>
+              <span className="text-cyan-100 break-words sm:text-right max-w-[200px]">
                 {h === "pctComisAgente" ? pctComisAgenteValue : recibo[h]}
               </span>
             </div>
