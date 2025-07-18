@@ -9,6 +9,7 @@ import {
   ChartBarIcon,
   FolderMinusIcon,
   UserGroupIcon,
+  CurrencyDollarIcon,
 } from "@heroicons/react/24/outline";
 
 const Header = () => {
@@ -60,11 +61,11 @@ const Header = () => {
         </li>
         <li className="text-white">
           <Link
-            href="/statements"
+            href="/view_statements"
             className="flex items-center text-white hover:text-gray-300"
           >
             <ChartBarIcon className="mr-2 inline-block h-5 w-5" />
-            Estados de cuenta
+            Ver Estados de Cuenta
           </Link>
         </li>
         <li className="text-white">
@@ -74,6 +75,15 @@ const Header = () => {
           >
             <UserGroupIcon className="mr-2 inline-block h-5 w-5" />
             Gestion de usuarios
+          </Link>
+        </li>
+        <li className="text-white">
+          <Link
+            href="/saldos-pendientes"
+            className="flex items-center text-white hover:text-gray-300"
+          >
+            <CurrencyDollarIcon className="mr-2 inline-block h-5 w-5" />
+            Saldos Pendientes
           </Link>
         </li>
         {session && (

@@ -1,19 +1,45 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
-
-export async function GET() {
+// Endpoint para buscar usuario por clave: /api/users?clave=123
+// Endpoint para obtener datos específicos: /api/users?clave=123&fields=rfc,banco,cuenta_clabe
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const clave = searchParams.get("clave");
+  const fields = searchParams.get("fields");
+  
+  if (clave) {
+    try {
+      const user = await prisma.user.findUnique({ where: { clave: Number(clave) } });
+      if (!user) {
+        return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+      }
+      
+      // Si se especifican campos específicos, devolver solo esos
+      if (fields) {
+        const requestedFields = fields.split(',').map(f => f.trim());
+        const filteredUser = { clave: user.clave, nombre: user.nombre };
+        requestedFields.forEach(field => {
+          if (user.hasOwnProperty(field)) {
+            filteredUser[field] = user[field];
+          }
+        });
+        return NextResponse.json(filteredUser);
+      }
+      
+      return NextResponse.json(user);
+    } catch (error) {
+      return NextResponse.json({ error: "Error buscando usuario" }, { status: 500 });
+    }
+  }
+  // Si no hay clave, devolver todos (comportamiento original)
   try {
-    const users = await prisma.user.findMany({
-      orderBy: { clave: "asc" },
-    });
+    const users = await prisma.user.findMany({ orderBy: { clave: "asc" } });
     return NextResponse.json(users);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Error fetching users" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error fetching users" }, { status: 500 });
   }
 }
+
 
 export async function PUT(request) {
   try {
