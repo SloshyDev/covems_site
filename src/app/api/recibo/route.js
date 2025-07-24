@@ -113,7 +113,7 @@ export async function POST(req) {
       });
     }
 
-    return NextResponse.json({ ok: true, creados: creados.length });
+    return NextResponse.json({ ok: true, insertados: creados.length, polizasActualizadas: Object.keys(polizasAActualizar).length });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

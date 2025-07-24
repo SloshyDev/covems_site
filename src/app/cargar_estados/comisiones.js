@@ -7,6 +7,8 @@ export const comisionesPorAgente = {
 };
 
 export function getComisionPorcentaje(agenteClave, anioVig) {
+  // Si el agente es el 1, no se le paga comisión
+  if (agenteClave === '1') return 0;
   // Si el agente es el 2, siempre 96%
   if (agenteClave === '2') return 96;
   // Para los demás, depende del año de vigencia
@@ -55,6 +57,16 @@ export function getComisionMontoRecibo(row, idxs) {
  * @returns {Object} { valor, base, porcentaje, tipo, fuente }
  */
 export function getComisionAgenteRecibo(row, idxs, agenteClave, anioVig) {
+  // Si el agente es 1, no se le paga comisión
+  if (agenteClave === '1') {
+    return {
+      valor: 0,
+      base: 0,
+      porcentaje: 0,
+      tipo: 'agente1',
+      fuente: 'Sin comisión para agente 1'
+    };
+  }
   // Si el agente es 2, la comisión es la promotoria por su porcentaje
   if (agenteClave === '2') {
     const comisionPromotoria = getComisionMontoRecibo(row, idxs);
