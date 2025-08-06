@@ -101,6 +101,15 @@ export async function actualizarSaldosPendientes(year, month, corteIdx, cortes, 
     }
   }
 
+  // Agregar saldos pendientes negativos para claves que no tuvieron recibos en el corte
+  // pero sí tienen saldo pendiente negativo (evitar duplicados)
+  const clavesProcesadas = new Set(saldosARegistrar.map(s => String(s.clave)));
+  for (const [clave, saldoPendiente] of Object.entries(saldosPendientesPorClave)) {
+    if (saldoPendiente < 0 && !clavesProcesadas.has(String(clave))) {
+      saldosARegistrar.push({ clave, saldo: saldoPendiente });
+    }
+  }
+
   console.log('Saldos a registrar:', saldosARegistrar);
 
   if (saldosARegistrar.length === 0) {

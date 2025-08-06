@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import {
   ArrowUpTrayIcon,
@@ -10,10 +10,17 @@ import {
   FolderMinusIcon,
   UserGroupIcon,
   CurrencyDollarIcon,
+  ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 
 const Header = () => {
   const { data: session } = useSession();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
   return (
     <header className="absolute flex w-full items-center justify-between bg-gray-600/55 to-0% p-4 text-center drop-shadow-2xl backdrop-blur-sm">
       <li className="list-none">
@@ -59,14 +66,42 @@ const Header = () => {
             Cargar estado de cuenta
           </Link>
         </li>
-        <li className="text-white">
-          <Link
-            href="/view_statements"
+        <li className="text-white relative">
+          <button
+            onClick={toggleDropdown}
             className="flex items-center text-white hover:text-gray-300"
           >
             <ChartBarIcon className="mr-2 inline-block h-5 w-5" />
             Ver Estados de Cuenta
-          </Link>
+            <ChevronDownIcon className="ml-1 inline-block h-4 w-4" />
+          </button>
+          {isDropdownOpen && (
+            <div className="absolute top-full left-0 mt-1 w-56 bg-gray-700 rounded-md shadow-lg z-50">
+              <div className="py-1">
+                <Link
+                  href="/view_statement/weekly"
+                  className="block px-4 py-2 text-sm text-white hover:bg-gray-600"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  Estado Semanal
+                </Link>
+                <Link
+                  href="/view_statement/monthly"
+                  className="block px-4 py-2 text-sm text-white hover:bg-gray-600"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  Estado Mensual
+                </Link>
+                <Link
+                  href="/view_statement?periodo=completo"
+                  className="block px-4 py-2 text-sm text-white hover:bg-gray-600"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  Estado Completo
+                </Link>
+              </div>
+            </div>
+          )}
         </li>
         <li className="text-white">
           <Link
