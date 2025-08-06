@@ -14,6 +14,23 @@ export default function ExportProductionPDFButton({
   const [showPreview, setShowPreview] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [usuarios, setUsuarios] = useState([]);
+
+  // Cargar usuarios para obtener nombres de agentes
+  useEffect(() => {
+    const fetchUsuarios = async () => {
+      try {
+        const res = await fetch("/api/users");
+        const json = await res.json();
+        if (Array.isArray(json)) {
+          setUsuarios(json);
+        }
+      } catch (error) {
+        console.error("Error al cargar usuarios:", error);
+      }
+    };
+    fetchUsuarios();
+  }, []);
 
   // Cleanup function para liberar blob URLs
   useEffect(() => {
@@ -40,9 +57,32 @@ export default function ExportProductionPDFButton({
     }
   }, [showPreview]);
 
-  const generatePDF = (preview = false) => {
+  const generatePDF = (preview = false, sinComisiones = false) => {
     try {
       const doc = new jsPDF('landscape'); // Orientación horizontal
+      
+      // Calcular totales ajustados según forma de pago
+      const totalesAjustados = {
+        primaFracc: recibos.reduce((acc, recibo) => {
+          let primaAjustada = Number(recibo.primaFracc) || 0;
+          const formaPago = recibo.formaPago?.toUpperCase();
+          if (formaPago === "H") {
+            primaAjustada *= 24; // Hipotecario
+          } else if (formaPago === "M") {
+            primaAjustada *= 12; // Mensual
+          }
+          return acc + primaAjustada;
+        }, 0),
+        comisPromotoria: totales.comisPromotoria,
+        comisAgente: totales.comisAgente,
+        comisSupervisor: totales.comisSupervisor
+      };
+
+      // Función para obtener nombre del agente
+      const getNombreAgente = (claveAgente) => {
+        const usuario = usuarios.find(u => u.clave === claveAgente);
+        return usuario ? usuario.nombre : claveAgente;
+      };
       
       // Logo en la parte superior izquierda
       // Puedes usar una imagen desde la carpeta public o convertida a base64
@@ -69,7 +109,7 @@ export default function ExportProductionPDFButton({
       doc.text(empresaText, (297 - empresaWidth) / 2, 15); // Centrado en página A4 horizontal
       
       doc.setFontSize(12);
-      const relacionText = 'RREPORTE DE PRODUCCIÓN';
+      const relacionText = sinComisiones ? 'REPORTE DE PRODUCCIÓN (SIN COMISIONES)' : 'RREPORTE DE PRODUCCIÓN';
       const relacionWidth = doc.getTextWidth(relacionText);
       doc.text(relacionText, (297 - relacionWidth) / 2, 25);
       
@@ -109,9 +149,12 @@ export default function ExportProductionPDFButton({
       doc.text("RESUMEN DE TOTALES", 20, 75);
       
       // Crear tabla colorida para el resumen en dos columnas
-      const resumenTableData = [
-        ["Prima Fraccionada:", `$${totales.primaFracc.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, "Comisión Promotoria:", `$${totales.comisPromotoria.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`],
-        ["Comisión Agente:", `$${totales.comisAgente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, "Comisión Supervisor:", `$${totales.comisSupervisor.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`],
+      const resumenTableData = sinComisiones ? [
+        ["Prima Fraccionada:", `$${totalesAjustados.primaFracc.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, "Total de Recibos:", recibos.length.toString()],
+        ["", "", "", ""]
+      ] : [
+        ["Prima Fraccionada:", `$${totalesAjustados.primaFracc.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, "Comisión Promotoria:", `$${totalesAjustados.comisPromotoria.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`],
+        ["Comisión Agente:", `$${totalesAjustados.comisAgente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, "Comisión Supervisor:", `$${totalesAjustados.comisSupervisor.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`],
         ["Total de Recibos:", recibos.length.toString(), "", ""]
       ];
       
@@ -161,6 +204,19 @@ export default function ExportProductionPDFButton({
       
       // Preparar datos para la tabla
       const tableData = recibos.map(recibo => {
+        // Calcular prima fraccionada ajustada según forma de pago
+        let primaAjustada = recibo.primaFracc;
+        if (primaAjustada !== null && primaAjustada !== undefined && primaAjustada !== "") {
+          const formaPago = recibo.formaPago?.toUpperCase();
+          if (formaPago === "H") {
+            primaAjustada = Number(primaAjustada) * 24; // Hipotecario
+          } else if (formaPago === "M") {
+            primaAjustada = Number(primaAjustada) * 12; // Mensual
+          } else {
+            primaAjustada = Number(primaAjustada);
+          }
+        }
+
         const row = [
           recibo.fechaMovimiento 
             ? new Date(recibo.fechaMovimiento).toLocaleDateString('es-MX')
@@ -169,41 +225,58 @@ export default function ExportProductionPDFButton({
           (recibo.nombreAsegurado || "N/A").substring(0, 25) + 
             (recibo.nombreAsegurado && recibo.nombreAsegurado.length > 25 ? "..." : ""),
           recibo.dsn || "N/A",
-          recibo.primaFracc !== null && recibo.primaFracc !== undefined && recibo.primaFracc !== "" 
-            ? `$${Number(recibo.primaFracc).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
-            : "-",
-          recibo.comisPromotoria !== null && recibo.comisPromotoria !== undefined && recibo.comisPromotoria !== ""
-            ? `$${Number(recibo.comisPromotoria).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
-            : "-",
-          recibo.comisAgente !== null && recibo.comisAgente !== undefined && recibo.comisAgente !== ""
-            ? `$${Number(recibo.comisAgente).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
-            : "-",
-          recibo.comisSupervisor !== null && recibo.comisSupervisor !== undefined && recibo.comisSupervisor !== ""
-            ? `$${Number(recibo.comisSupervisor).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
-            : "-",
-          recibo.formaPago || "N/A"
+          primaAjustada !== null && primaAjustada !== undefined && primaAjustada !== "" 
+            ? `$${Number(primaAjustada).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+            : "-"
         ];
+
+        // Si no es sin comisiones, agregar las columnas de comisiones
+        if (!sinComisiones) {
+          row.push(
+            recibo.comisPromotoria !== null && recibo.comisPromotoria !== undefined && recibo.comisPromotoria !== ""
+              ? `$${Number(recibo.comisPromotoria).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+              : "-",
+            recibo.comisAgente !== null && recibo.comisAgente !== undefined && recibo.comisAgente !== ""
+              ? `$${Number(recibo.comisAgente).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+              : "-",
+            recibo.comisSupervisor !== null && recibo.comisSupervisor !== undefined && recibo.comisSupervisor !== ""
+              ? `$${Number(recibo.comisSupervisor).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+              : "-"
+          );
+        }
+
+        // Agregar forma de pago
+        row.push(recibo.formaPago || "N/A");
         
-        // Si estamos mostrando todos los agentes, agregar la columna de agente
+        // Si estamos mostrando todos los agentes, agregar la columna de agente con nombre
         if (claveAgente === "TODOS") {
-          row.splice(1, 0, recibo.claveAgente || "N/A");
+          const nombreCompleto = `${recibo.claveAgente || "N/A"} - ${getNombreAgente(recibo.claveAgente)}`;
+          row.splice(1, 0, nombreCompleto.length > 25 ? nombreCompleto.substring(0, 22) + "..." : nombreCompleto);
         }
         
         return row;
       });
       
-      // Definir las columnas
+      // Definir las columnas según si incluye comisiones o no
       let columns = [
         { header: "Fecha Mov.", dataKey: "fecha" },
         { header: "Póliza", dataKey: "poliza" },
         { header: "Asegurado", dataKey: "asegurado" },
         { header: "DSN", dataKey: "dsn" },
-        { header: "Prima Fracc.", dataKey: "prima" },
-        { header: "Comis. Promotoria", dataKey: "comisPromotoria" },
-        { header: "Comis. Agente", dataKey: "comisAgente" },
-        { header: "Comis. Supervisor", dataKey: "comisSupervisor" },
-        { header: "Forma Pago", dataKey: "formaPago" }
+        { header: "Prima Fracc.", dataKey: "prima" }
       ];
+
+      // Si no es sin comisiones, agregar columnas de comisiones
+      if (!sinComisiones) {
+        columns.push(
+          { header: "Comis. Promotoria", dataKey: "comisPromotoria" },
+          { header: "Comis. Agente", dataKey: "comisAgente" },
+          { header: "Comis. Supervisor", dataKey: "comisSupervisor" }
+        );
+      }
+
+      // Agregar forma de pago al final
+      columns.push({ header: "Forma Pago", dataKey: "formaPago" });
       
       // Si estamos mostrando todos los agentes, agregar la columna de agente
       if (claveAgente === "TODOS") {
@@ -227,17 +300,27 @@ export default function ExportProductionPDFButton({
         alternateRowStyles: {
           fillColor: [245, 245, 245],
         },
-        columnStyles: {
+        columnStyles: sinComisiones ? {
+          // Configuración para tabla sin comisiones
+          0: { cellWidth: claveAgente === "TODOS" ? 25 : 30 }, // Fecha
+          1: claveAgente === "TODOS" ? { cellWidth: 45 } : { cellWidth: 40 }, // Agente o Póliza
+          2: { cellWidth: claveAgente === "TODOS" ? 40 : 60 }, // Póliza o Asegurado
+          3: { cellWidth: claveAgente === "TODOS" ? 60 : 25 }, // Asegurado o DSN
+          4: { cellWidth: 25 }, // DSN o Prima
+          5: { cellWidth: 35, halign: 'right' }, // Prima o Forma Pago
+          6: { cellWidth: 25 }, // Forma Pago (solo cuando hay columna de agente)
+        } : {
+          // Configuración para tabla con comisiones
           0: { cellWidth: claveAgente === "TODOS" ? 20 : 25 }, // Fecha
-          1: claveAgente === "TODOS" ? { cellWidth: 18 } : { cellWidth: 25 }, // Agente o Póliza
+          1: claveAgente === "TODOS" ? { cellWidth: 35 } : { cellWidth: 25 }, // Agente (con nombre) o Póliza
           2: { cellWidth: claveAgente === "TODOS" ? 25 : 40 }, // Póliza o Asegurado
-          3: { cellWidth: claveAgente === "TODOS" ? 40 : 15 }, // Asegurado o DSN
+          3: { cellWidth: claveAgente === "TODOS" ? 35 : 15 }, // Asegurado o DSN
           4: { cellWidth: 15 }, // DSN o Prima
           5: { cellWidth: 25, halign: 'right' }, // Prima o Comis. Promotoria
           6: { cellWidth: 25, halign: 'right' }, // Comis. Promotoria o Comis. Agente
           7: { cellWidth: 25, halign: 'right' }, // Comis. Agente o Comis. Supervisor
           8: { cellWidth: 25, halign: 'right' }, // Comis. Supervisor o Forma Pago
-          9: { cellWidth: 25 }, // Forma Pago (solo cuando hay columna de agente)
+          9: { cellWidth: 20 }, // Forma Pago (solo cuando hay columna de agente)
         },
         margin: { top: 130, left: 15, right: 15 },
         pageBreak: 'auto',
@@ -264,8 +347,8 @@ export default function ExportProductionPDFButton({
       
       // Generar nombre del archivo
       const fileName = claveAgente === "TODOS" 
-        ? `produccion_emi_todos_${monthName}_${year}.pdf`
-        : `produccion_emi_${claveAgente}_${monthName}_${year}.pdf`;
+        ? `produccion_emi_todos_${monthName}_${year}${sinComisiones ? '_sin_comisiones' : ''}.pdf`
+        : `produccion_emi_${claveAgente}_${monthName}_${year}${sinComisiones ? '_sin_comisiones' : ''}.pdf`;
       
       if (preview) {
         // Para vista previa, crear blob URL
@@ -294,7 +377,7 @@ export default function ExportProductionPDFButton({
   const handlePreview = async () => {
     setIsGenerating(true);
     try {
-      await generatePDF(true);
+      await generatePDF(true, false);
     } catch (error) {
       console.error("Error al generar vista previa:", error);
       alert("Error al generar la vista previa del PDF");
@@ -306,10 +389,22 @@ export default function ExportProductionPDFButton({
   const handleDownload = async () => {
     setIsGenerating(true);
     try {
-      await generatePDF(false);
+      await generatePDF(false, false);
     } catch (error) {
       console.error("Error al descargar PDF:", error);
       alert("Error al descargar el PDF");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadSinComisiones = async () => {
+    setIsGenerating(true);
+    try {
+      await generatePDF(false, true);
+    } catch (error) {
+      console.error("Error al descargar PDF sin comisiones:", error);
+      alert("Error al descargar el PDF sin comisiones");
     } finally {
       setIsGenerating(false);
     }
@@ -365,10 +460,11 @@ export default function ExportProductionPDFButton({
                   d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                 />
               </svg>
-              DESCARGAR PDF
+              Vista Previa
             </>
           )}
         </button>
+
         
        
       </div>
@@ -398,7 +494,24 @@ export default function ExportProductionPDFButton({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   )}
-                  {isGenerating ? "Descargando..." : "Descargar"}
+                  {isGenerating ? "Descargando..." : "PDF Completo"}
+                </button>
+                <button
+                  onClick={handleDownloadSinComisiones}
+                  disabled={isGenerating}
+                  className="inline-flex items-center px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed text-white text-sm rounded transition-colors duration-200"
+                >
+                  {isGenerating ? (
+                    <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 712-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  )}
+                  {isGenerating ? "Descargando..." : "Sin Comisiones"}
                 </button>
                 <button
                   onClick={closePreview}
