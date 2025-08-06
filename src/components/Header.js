@@ -93,11 +93,11 @@ const Header = () => {
                   Estado Mensual
                 </Link>
                 <Link
-                  href="/view_statement?periodo=completo"
+                  href="/view_statement/production"
                   className="block px-4 py-2 text-sm text-white hover:bg-gray-600"
                   onClick={() => setIsDropdownOpen(false)}
                 >
-                  Estado Completo
+                  Produccion
                 </Link>
               </div>
             </div>
