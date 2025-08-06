@@ -57,7 +57,7 @@ export default function ExportProductionPDFButton({
     }
   }, [showPreview]);
 
-  const generatePDF = (preview = false, sinComisiones = false) => {
+  const generatePDF = (preview = false, sinComisiones = false, comisionGerente = false) => {
     try {
       const doc = new jsPDF('landscape'); // Orientación horizontal
       
@@ -75,7 +75,22 @@ export default function ExportProductionPDFButton({
         }, 0),
         comisPromotoria: totales.comisPromotoria,
         comisAgente: totales.comisAgente,
-        comisSupervisor: totales.comisSupervisor
+        comisSupervisor: totales.comisSupervisor,
+        comisionGerente: comisionGerente ? recibos.reduce((acc, recibo) => {
+          let primaAjustada = Number(recibo.primaFracc) || 0;
+          const formaPago = recibo.formaPago?.toUpperCase();
+          if (formaPago === "H") {
+            primaAjustada *= 24;
+          } else if (formaPago === "M") {
+            primaAjustada *= 12;
+          }
+          // Calcular comisión: 2% base, +2% adicional si prima > 500,000
+          let porcentajeComision = 0.02; // 2% base
+          if (primaAjustada > 500000) {
+            porcentajeComision = 0.04; // 4% total si prima > 500,000
+          }
+          return acc + (primaAjustada * porcentajeComision);
+        }, 0) : 0
       };
 
       // Función para obtener nombre del agente
@@ -109,7 +124,9 @@ export default function ExportProductionPDFButton({
       doc.text(empresaText, (297 - empresaWidth) / 2, 15); // Centrado en página A4 horizontal
       
       doc.setFontSize(12);
-      const relacionText = sinComisiones ? 'REPORTE DE PRODUCCIÓN (SIN COMISIONES)' : 'RREPORTE DE PRODUCCIÓN';
+      const relacionText = sinComisiones ? 'REPORTE DE PRODUCCIÓN (SIN COMISIONES)' : 
+                          comisionGerente ? 'REPORTE DE PRODUCCIÓN - COMISIÓN GERENTE' :
+                          'REPORTE DE PRODUCCIÓN';
       const relacionWidth = doc.getTextWidth(relacionText);
       doc.text(relacionText, (297 - relacionWidth) / 2, 25);
       
@@ -152,6 +169,9 @@ export default function ExportProductionPDFButton({
       const resumenTableData = sinComisiones ? [
         ["Prima Fraccionada:", `$${totalesAjustados.primaFracc.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, "Total de Recibos:", recibos.length.toString()],
         ["", "", "", ""]
+      ] : comisionGerente ? [
+        ["Prima Fraccionada:", `$${totalesAjustados.primaFracc.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, "Comisión Gerente:", `$${totalesAjustados.comisionGerente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`],
+        ["Total de Recibos:", recibos.length.toString(), "", ""]
       ] : [
         ["Prima Fraccionada:", `$${totalesAjustados.primaFracc.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, "Comisión Promotoria:", `$${totalesAjustados.comisPromotoria.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`],
         ["Comisión Agente:", `$${totalesAjustados.comisAgente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, "Comisión Supervisor:", `$${totalesAjustados.comisSupervisor.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`],
@@ -230,8 +250,24 @@ export default function ExportProductionPDFButton({
             : "-"
         ];
 
-        // Si no es sin comisiones, agregar las columnas de comisiones
-        if (!sinComisiones) {
+        // Si es comisión gerente, agregar la columna de comisión gerente
+        if (comisionGerente) {
+          let comisionGerenteValor = 0;
+          if (primaAjustada !== null && primaAjustada !== undefined && primaAjustada !== "") {
+            const prima = Number(primaAjustada);
+            // Calcular comisión: 2% base, +2% adicional si prima > 500,000
+            let porcentajeComision = 0.02; // 2% base
+            if (prima > 500000) {
+              porcentajeComision = 0.04; // 4% total si prima > 500,000
+            }
+            comisionGerenteValor = prima * porcentajeComision;
+          }
+          row.push(
+            `$${comisionGerenteValor.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+          );
+        }
+        // Si no es sin comisiones ni comisión gerente, agregar las columnas de comisiones normales
+        else if (!sinComisiones) {
           row.push(
             recibo.comisPromotoria !== null && recibo.comisPromotoria !== undefined && recibo.comisPromotoria !== ""
               ? `$${Number(recibo.comisPromotoria).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
@@ -266,8 +302,12 @@ export default function ExportProductionPDFButton({
         { header: "Prima Fracc.", dataKey: "prima" }
       ];
 
-      // Si no es sin comisiones, agregar columnas de comisiones
-      if (!sinComisiones) {
+      // Si es comisión gerente, agregar solo esa columna
+      if (comisionGerente) {
+        columns.push({ header: "Comisión Gerente", dataKey: "comisionGerente" });
+      }
+      // Si no es sin comisiones ni comisión gerente, agregar columnas de comisiones normales
+      else if (!sinComisiones) {
         columns.push(
           { header: "Comis. Promotoria", dataKey: "comisPromotoria" },
           { header: "Comis. Agente", dataKey: "comisAgente" },
@@ -309,6 +349,17 @@ export default function ExportProductionPDFButton({
           4: { cellWidth: 25 }, // DSN o Prima
           5: { cellWidth: 35, halign: 'right' }, // Prima o Forma Pago
           6: { cellWidth: 25 }, // Forma Pago (solo cuando hay columna de agente)
+        } : comisionGerente ? {
+          // Configuración para tabla con comisión gerente
+          0: { cellWidth: claveAgente === "TODOS" ? 20 : 25 }, // Fecha
+          1: claveAgente === "TODOS" ? { cellWidth: 35 } : { cellWidth: 40 }, // Agente o Póliza
+          2: { cellWidth: claveAgente === "TODOS" ? 25 : 60 }, // Póliza o Asegurado
+          3: { cellWidth: claveAgente === "TODOS" ? 40 : 25 }, // Asegurado o DSN
+          4: { cellWidth: 25 }, // DSN o Prima
+          5: { cellWidth: 35, halign: 'right' }, // Prima
+          6: { cellWidth: 35, halign: 'right' }, // Comisión Gerente
+          7: { cellWidth: 25 }, // Forma Pago
+          8: { cellWidth: 25 }, // Agente (solo cuando TODOS)
         } : {
           // Configuración para tabla con comisiones
           0: { cellWidth: claveAgente === "TODOS" ? 20 : 25 }, // Fecha
@@ -347,8 +398,8 @@ export default function ExportProductionPDFButton({
       
       // Generar nombre del archivo
       const fileName = claveAgente === "TODOS" 
-        ? `produccion_emi_todos_${monthName}_${year}${sinComisiones ? '_sin_comisiones' : ''}.pdf`
-        : `produccion_emi_${claveAgente}_${monthName}_${year}${sinComisiones ? '_sin_comisiones' : ''}.pdf`;
+        ? `produccion_emi_todos_${monthName}_${year}${sinComisiones ? '_sin_comisiones' : ''}${comisionGerente ? '_comision_gerente' : ''}.pdf`
+        : `produccion_emi_${claveAgente}_${monthName}_${year}${sinComisiones ? '_sin_comisiones' : ''}${comisionGerente ? '_comision_gerente' : ''}.pdf`;
       
       if (preview) {
         // Para vista previa, crear blob URL
@@ -377,7 +428,7 @@ export default function ExportProductionPDFButton({
   const handlePreview = async () => {
     setIsGenerating(true);
     try {
-      await generatePDF(true, false);
+      await generatePDF(true, false, false);
     } catch (error) {
       console.error("Error al generar vista previa:", error);
       alert("Error al generar la vista previa del PDF");
@@ -389,7 +440,7 @@ export default function ExportProductionPDFButton({
   const handleDownload = async () => {
     setIsGenerating(true);
     try {
-      await generatePDF(false, false);
+      await generatePDF(false, false, false);
     } catch (error) {
       console.error("Error al descargar PDF:", error);
       alert("Error al descargar el PDF");
@@ -401,10 +452,22 @@ export default function ExportProductionPDFButton({
   const handleDownloadSinComisiones = async () => {
     setIsGenerating(true);
     try {
-      await generatePDF(false, true);
+      await generatePDF(false, true, false);
     } catch (error) {
       console.error("Error al descargar PDF sin comisiones:", error);
       alert("Error al descargar el PDF sin comisiones");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadComisionGerente = async () => {
+    setIsGenerating(true);
+    try {
+      await generatePDF(false, false, true); // El tercer parámetro será para comisión gerente
+    } catch (error) {
+      console.error("Error al descargar PDF comisión gerente:", error);
+      alert("Error al descargar el PDF con comisión gerente");
     } finally {
       setIsGenerating(false);
     }
@@ -424,7 +487,7 @@ export default function ExportProductionPDFButton({
 
   return (
     <>
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button
           onClick={handlePreview}
           disabled={isGenerating}
@@ -465,8 +528,45 @@ export default function ExportProductionPDFButton({
           )}
         </button>
 
+
+        {/* Botón de Comisión Gerente - solo aparece cuando claveAgente === "TODOS" */}
+        {claveAgente === "TODOS" && (
+          <button
+            onClick={handleDownloadComisionGerente}
+            disabled={isGenerating}
+            className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+          >
+            {isGenerating ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Generando...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z"
+                  />
+                </svg>
+                Comisión Gerente
+              </>
+            )}
+          </button>
+        )}
+
         
-       
       </div>
 
       {/* Modal de vista previa */}
@@ -513,6 +613,26 @@ export default function ExportProductionPDFButton({
                   )}
                   {isGenerating ? "Descargando..." : "Sin Comisiones"}
                 </button>
+                {/* Botón de Comisión Gerente en modal - solo aparece cuando claveAgente === "TODOS" */}
+                {claveAgente === "TODOS" && (
+                  <button
+                    onClick={handleDownloadComisionGerente}
+                    disabled={isGenerating}
+                    className="inline-flex items-center px-3 py-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed text-white text-sm rounded transition-colors duration-200"
+                  >
+                    {isGenerating ? (
+                      <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 718-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                    {isGenerating ? "Descargando..." : "Comisión Gerente"}
+                  </button>
+                )}
                 <button
                   onClick={closePreview}
                   className="text-gray-400 hover:text-gray-600 transition-colors duration-200 p-1"
