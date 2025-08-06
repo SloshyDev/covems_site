@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -11,7 +11,36 @@ export default function ExportProductionPDFButton({
   year, 
   month 
 }) {
-  const exportToPDF = () => {
+  const [showPreview, setShowPreview] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Cleanup function para liberar blob URLs
+  useEffect(() => {
+    return () => {
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
+  }, [pdfBlobUrl]);
+
+  // Handler para cerrar modal con ESC
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && showPreview) {
+        closePreview();
+      }
+    };
+
+    if (showPreview) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [showPreview]);
+
+  const generatePDF = (preview = false) => {
     try {
       const doc = new jsPDF('landscape'); // Orientación horizontal
       
@@ -238,12 +267,59 @@ export default function ExportProductionPDFButton({
         ? `produccion_emi_todos_${monthName}_${year}.pdf`
         : `produccion_emi_${claveAgente}_${monthName}_${year}.pdf`;
       
-      // Descargar el PDF
-      doc.save(fileName);
+      if (preview) {
+        // Para vista previa, crear blob URL
+        const pdfBlob = doc.output('blob');
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        
+        // Limpiar URL anterior si existe
+        if (pdfBlobUrl) {
+          URL.revokeObjectURL(pdfBlobUrl);
+        }
+        
+        setPdfBlobUrl(blobUrl);
+        setShowPreview(true);
+        return doc;
+      } else {
+        // Descargar el PDF
+        doc.save(fileName);
+      }
       
     } catch (error) {
       console.error("Error al generar el PDF:", error);
       alert("Error al generar el PDF. Por favor, inténtelo de nuevo.");
+    }
+  };
+
+  const handlePreview = async () => {
+    setIsGenerating(true);
+    try {
+      await generatePDF(true);
+    } catch (error) {
+      console.error("Error al generar vista previa:", error);
+      alert("Error al generar la vista previa del PDF");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    setIsGenerating(true);
+    try {
+      await generatePDF(false);
+    } catch (error) {
+      console.error("Error al descargar PDF:", error);
+      alert("Error al descargar el PDF");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const closePreview = () => {
+    setShowPreview(false);
+    if (pdfBlobUrl) {
+      URL.revokeObjectURL(pdfBlobUrl);
+      setPdfBlobUrl("");
     }
   };
 
@@ -252,25 +328,122 @@ export default function ExportProductionPDFButton({
   }
 
   return (
-    <button
-      onClick={exportToPDF}
-      className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-    >
-      <svg
-        className="w-5 h-5 mr-2"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-      Exportar a PDF
-    </button>
+    <>
+      <div className="flex gap-2">
+        <button
+          onClick={handlePreview}
+          disabled={isGenerating}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          {isGenerating ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Generando...
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
+              </svg>
+              Vista Previa
+            </>
+          )}
+        </button>
+        
+       
+      </div>
+
+      {/* Modal de vista previa */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-7xl max-h-[95vh] w-full flex flex-col">
+            {/* Header del modal */}
+            <div className="flex justify-between items-center p-4 border-b bg-gray-50 rounded-t-lg">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Vista Previa - Reporte de Producción
+              </h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDownload}
+                  disabled={isGenerating}
+                  className="inline-flex items-center px-3 py-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white text-sm rounded transition-colors duration-200"
+                >
+                  {isGenerating ? (
+                    <svg className="animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  )}
+                  {isGenerating ? "Descargando..." : "Descargar"}
+                </button>
+                <button
+                  onClick={closePreview}
+                  className="text-gray-400 hover:text-gray-600 transition-colors duration-200 p-1"
+                  aria-label="Cerrar vista previa"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            {/* Contenido del PDF */}
+            <div className="flex-1 overflow-hidden bg-gray-100">
+              {pdfBlobUrl ? (
+                <iframe
+                  src={`${pdfBlobUrl}#toolbar=1&navpanes=1&scrollbar=1&page=1&view=FitH`}
+                  className="w-full h-full border-0"
+                  title="Vista previa del PDF"
+                  style={{ minHeight: '600px' }}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <svg className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p className="text-gray-600">Cargando vista previa...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Footer del modal */}
+            <div className="p-3 border-t bg-gray-50 rounded-b-lg">
+              <div className="flex justify-between items-center text-sm text-gray-600">
+                <span>Use Ctrl+scroll para hacer zoom en el PDF</span>
+                <span>Presione ESC para cerrar</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

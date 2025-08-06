@@ -228,7 +228,7 @@ export default function ProductionViewPage() {
           <div className="bg-gray-800 rounded-lg p-4 mb-6">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-lg font-semibold text-cyan-300">
-                Resumen de Producción ({recibos.length} recibos EMI{claveAgente === "TODOS" ? " - Todos los agentes" : ""})
+                Resumen de Producción ({recibos.length} recibos {claveAgente === "TODOS" ? " - Todos los agentes" : ""})
               </h3>
               <ExportProductionPDFButton
                 recibos={recibos}
