@@ -82,7 +82,16 @@ export default function ProductionViewPage() {
 
   // Calcular totales
   const totales = {
-    primaFracc: recibos.reduce((acc, recibo) => acc + (Number(recibo.primaFracc) || 0), 0),
+    primaFracc: recibos.reduce((acc, recibo) => {
+      let primaAjustada = Number(recibo.primaFracc) || 0;
+      const formaPago = recibo.formaPago?.toUpperCase();
+      if (formaPago === "H") {
+        primaAjustada *= 24; // Hipotecario
+      } else if (formaPago === "M") {
+        primaAjustada *= 12; // Mensual
+      }
+      return acc + primaAjustada;
+    }, 0),
     comisPromotoria: recibos.reduce((acc, recibo) => acc + (Number(recibo.comisPromotoria) || 0), 0),
     comisAgente: recibos.reduce((acc, recibo) => acc + (Number(recibo.comisAgente) || 0), 0),
     comisSupervisor: recibos.reduce((acc, recibo) => acc + (Number(recibo.comisSupervisor) || 0), 0)
@@ -267,6 +276,7 @@ export default function ProductionViewPage() {
             </div>
           </div>
 
+        
           {/* Tabla de recibos */}
           <div className="bg-gray-800 rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
@@ -291,7 +301,10 @@ export default function ProductionViewPage() {
                       DSN
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Prima Fracc.
+                      <div className="flex flex-col items-center">
+                        <span>Prima Fracc.</span>
+                        <span className="text-xs text-gray-400 normal-case">(Ajustada)</span>
+                      </div>
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Comis. Promotoria
@@ -321,7 +334,11 @@ export default function ProductionViewPage() {
                       </td>
                       {claveAgente === "TODOS" && (
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-orange-400 font-medium">
-                          {recibo.claveAgente || "N/A"}
+                          {(() => {
+                            const usuario = usuarios.find(u => u.clave === recibo.claveAgente);
+                            const nombreCompleto = usuario ? `${recibo.claveAgente} - ${usuario.nombre}` : (recibo.claveAgente || "N/A");
+                            return nombreCompleto.length > 20 ? nombreCompleto.substring(0, 17) + "..." : nombreCompleto;
+                          })()}
                         </td>
                       )}
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-cyan-400 font-medium">
@@ -336,9 +353,16 @@ export default function ProductionViewPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-right text-gray-300">
-                        {recibo.primaFracc !== null && recibo.primaFracc !== undefined && recibo.primaFracc !== "" ? (
-                          `$${Number(recibo.primaFracc).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
-                        ) : (
+                        {recibo.primaFracc !== null && recibo.primaFracc !== undefined && recibo.primaFracc !== "" ? (() => {
+                          let primaAjustada = Number(recibo.primaFracc);
+                          const formaPago = recibo.formaPago?.toUpperCase();
+                          if (formaPago === "H") {
+                            primaAjustada *= 24; // Hipotecario
+                          } else if (formaPago === "M") {
+                            primaAjustada *= 12; // Mensual
+                          }
+                          return `$${primaAjustada.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+                        })() : (
                           <span className="text-gray-500">-</span>
                         )}
                       </td>
