@@ -23,6 +23,7 @@ model User {
   solicitudes      Solicitud[] @relation("UserToSolicitudes")
   polizas          Poliza[]    @relation("UserToPolizas")
   saldosPendientes SaldoPendiente[]
+  movimientos      Movimiento[]
 }
 
 model Solicitud {
@@ -101,4 +102,22 @@ model SaldoPendiente {
   observaciones String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model Movimiento {
+  id                 Int      @id @default(autoincrement())
+  empresa            String
+  fecha              DateTime
+  concepto           String
+  subconcepto        String?
+  tipoMovimiento     String   // "Ingreso" o "Egreso"
+  importe            Float
+  banco              String
+  tipo               String
+  tipoComprobancion  String
+  estatus            String
+  userId             Int?
+  user               User?    @relation(fields: [userId], references: [id])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }

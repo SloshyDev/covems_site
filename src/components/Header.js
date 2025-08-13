@@ -11,14 +11,22 @@ import {
   UserGroupIcon,
   CurrencyDollarIcon,
   ChevronDownIcon,
+  BanknotesIcon,
 } from "@heroicons/react/24/outline";
 
 const Header = () => {
   const { data: session } = useSession();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isPagosDropdownOpen, setIsPagosDropdownOpen] = useState(false);
+  const [isEstadosDropdownOpen, setIsEstadosDropdownOpen] = useState(false);
 
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
+  const togglePagosDropdown = () => {
+    setIsPagosDropdownOpen(!isPagosDropdownOpen);
+    setIsEstadosDropdownOpen(false); // Cierra el otro dropdown
+  };
+
+  const toggleEstadosDropdown = () => {
+    setIsEstadosDropdownOpen(!isEstadosDropdownOpen);
+    setIsPagosDropdownOpen(false); // Cierra el otro dropdown
   };
 
   return (
@@ -39,6 +47,38 @@ const Header = () => {
         </Link>
       </li>
       <ul className="flex items-center justify-center gap-4">
+        <li className="text-white relative">
+          <button
+            onClick={togglePagosDropdown}
+            className="flex items-center text-white hover:text-gray-300"
+          >
+            <CurrencyDollarIcon className="mr-2 inline-block h-5 w-5" />
+            Movimientos
+            <ChevronDownIcon className="ml-1 inline-block h-4 w-4" />
+          </button>
+          {isPagosDropdownOpen && (
+            <div className="absolute top-full left-0 mt-1 w-56 bg-gray-700 rounded-md shadow-lg z-50">
+              <div className="py-1">
+                <Link
+                  href="/payments/generate"
+                  className="block px-4 py-2 text-sm text-white hover:bg-gray-600"
+                  onClick={() => setIsPagosDropdownOpen(false)}
+                >
+                  <CurrencyDollarIcon className="mr-2 inline-block h-4 w-4" />
+                  Crear Movimientos
+                </Link>
+                <Link
+                  href="/payments/movements"
+                  className="block px-4 py-2 text-sm text-white hover:bg-gray-600"
+                  onClick={() => setIsPagosDropdownOpen(false)}
+                >
+                  <BanknotesIcon className="mr-2 inline-block h-4 w-4" />
+                  Ver Movimientos
+                </Link>
+              </div>
+            </div>
+          )}
+        </li>
         <li className="text-white">
           <Link
             href="/request"
@@ -68,34 +108,34 @@ const Header = () => {
         </li>
         <li className="text-white relative">
           <button
-            onClick={toggleDropdown}
+            onClick={toggleEstadosDropdown}
             className="flex items-center text-white hover:text-gray-300"
           >
             <ChartBarIcon className="mr-2 inline-block h-5 w-5" />
             Ver Estados de Cuenta
             <ChevronDownIcon className="ml-1 inline-block h-4 w-4" />
           </button>
-          {isDropdownOpen && (
+          {isEstadosDropdownOpen && (
             <div className="absolute top-full left-0 mt-1 w-56 bg-gray-700 rounded-md shadow-lg z-50">
               <div className="py-1">
                 <Link
                   href="/view_statement/weekly"
                   className="block px-4 py-2 text-sm text-white hover:bg-gray-600"
-                  onClick={() => setIsDropdownOpen(false)}
+                  onClick={() => setIsEstadosDropdownOpen(false)}
                 >
                   Estado Semanal
                 </Link>
                 <Link
                   href="/view_statement/monthly"
                   className="block px-4 py-2 text-sm text-white hover:bg-gray-600"
-                  onClick={() => setIsDropdownOpen(false)}
+                  onClick={() => setIsEstadosDropdownOpen(false)}
                 >
                   Estado Mensual
                 </Link>
                 <Link
                   href="/view_statement/production"
                   className="block px-4 py-2 text-sm text-white hover:bg-gray-600"
-                  onClick={() => setIsDropdownOpen(false)}
+                  onClick={() => setIsEstadosDropdownOpen(false)}
                 >
                   Produccion
                 </Link>
