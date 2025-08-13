@@ -1,7 +1,24 @@
 "use client"
 import React, { useState, useEffect } from "react";
+import MovimientosPrintCheckbox from "./MovimientosPrintCheckbox";
+import { printMovimientosPDF } from "./MovimientosPrintCheckbox";
 
 export default function MovimientosPage() {
+    const [selectedToPrint, setSelectedToPrint] = useState([]);
+
+    const handlePrintCheckbox = (id) => {
+        setSelectedToPrint(prev =>
+            prev.includes(id)
+                ? prev.filter(x => x !== id)
+                : [...prev, id]
+        );
+    };
+
+    const handlePrintSelected = () => {
+        const movimientosSeleccionados = movimientos.filter(mov => selectedToPrint.includes(mov.id));
+        if (movimientosSeleccionados.length === 0) return;
+        printMovimientosPDF(movimientosSeleccionados);
+    };
     const updateEstatus = async (id) => {
         try {
             const response = await fetch(`/api/movimientos?id=${id}`, {
@@ -113,6 +130,7 @@ export default function MovimientosPage() {
                         <table className="min-w-full bg-gray-900 rounded-lg shadow">
                             <thead>
                                 <tr className="bg-blue-800 text-white">
+                                    <th className="py-3 px-4 text-left">Imprimir</th>
                                     <th className="py-3 px-4 text-left">ID</th>
                                     <th className="py-3 px-4 text-left">Empresa</th>
                                     <th className="py-3 px-4 text-left">Fecha</th>
@@ -128,6 +146,12 @@ export default function MovimientosPage() {
                             <tbody>
                                 {movimientos.map((movimiento, idx) => (
                                     <tr key={movimiento.id} className={idx % 2 === 0 ? "bg-gray-800" : "bg-gray-900"}>
+                                        <td className="py-2 px-4 text-center">
+                                            <MovimientosPrintCheckbox
+                                                checked={selectedToPrint.includes(movimiento.id)}
+                                                onChange={() => handlePrintCheckbox(movimiento.id)}
+                                            />
+                                        </td>
                                         <td className="py-2 px-4 text-white">{movimiento.id}</td>
                                         <td className="py-2 px-4 text-white">{movimiento.empresa}</td>
                                         <td className="py-2 px-4 text-white">{formatDate(movimiento.fecha)}</td>
@@ -147,21 +171,42 @@ export default function MovimientosPage() {
                                         </td>
                                         <td className="py-2 px-4 text-white">{movimiento.banco}</td>
                                         <td className="py-2 px-4 text-white">
-                                            <span className={`px-2 py-1 rounded text-xs ${
-                                                movimiento.estatus === 'Completado' 
-                                                    ? 'bg-green-600 text-white' 
-                                                    : 'bg-yellow-600 text-white'
-                                            }`}>
-                                                {movimiento.estatus}
-                                            </span>
-                                            {movimiento.estatus === 'Pendiente' && (
-                                                <button
-                                                    className="ml-2 bg-green-700 text-white px-2 py-1 rounded text-xs hover:bg-green-800 transition"
-                                                    onClick={() => updateEstatus(movimiento.id)}
-                                                >
-                                                    Marcar como Completado
-                                                </button>
-                                            )}
+                                            <div className="flex items-center gap-2">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                                    movimiento.estatus === 'Completado' 
+                                                        ? 'bg-green-100 text-green-800 border border-green-300' 
+                                                        : 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                                                }`}>
+                                                    {movimiento.estatus === 'Completado' && (
+                                                        <span className="inline-flex items-center gap-1">
+                                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                            Completado
+                                                        </span>
+                                                    )}
+                                                    {movimiento.estatus === 'Pendiente' && (
+                                                        <span className="inline-flex items-center gap-1">
+                                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                                                            </svg>
+                                                            Pendiente
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                {movimiento.estatus === 'Pendiente' && (
+                                                    <button
+                                                        className="px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 hover:border-green-300 transition-all duration-200 flex items-center gap-1 cursor-pointer"
+                                                        onClick={() => updateEstatus(movimiento.id)}
+                                                        title="Marcar como Completado"
+                                                    >
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        Completar
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="py-2 px-4 text-white text-sm">
                                             {formatDate(movimiento.createdAt)}
@@ -180,6 +225,13 @@ export default function MovimientosPage() {
                         </table>
 
                         <div className="mt-6 p-4 bg-gray-800 rounded">
+                            <button
+                                className="mb-4 bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 transition"
+                                onClick={handlePrintSelected}
+                                disabled={selectedToPrint.length === 0}
+                            >
+                                Imprimir seleccionados en PDF
+                            </button>
                             <h3 className="text-lg font-semibold mb-2">Resumen:</h3>
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
