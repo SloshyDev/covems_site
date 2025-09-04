@@ -154,7 +154,7 @@ export default function ExportAgentePDFButton({ clave, nombre, recibos, saldo, f
         r[5], // Año Vig.
         r[4] || 'COM', // Plan (DSN o default COM)
         `$${parseFloat(r[6] || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, // primaFracc
-        '96%', // porcentaje comisión
+        r[9] ? `${parseFloat(r[9]).toFixed(1)}%` : '-', // porcentaje comisión agente real (índice 9)
         `$${parseFloat(r[10] || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` // comisAgente
       ])
     ];
